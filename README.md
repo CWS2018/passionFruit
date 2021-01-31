@@ -1,2 +1,2 @@
 # passionFruit
-some applications about nwtwork. 
+some applications about network. 
