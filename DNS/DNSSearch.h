@@ -4,7 +4,7 @@
 #include "include.h"
 
 #define DNS_PORT 53                                 //  DNS port
-#define DNS_SERVER_IP "114.114.114.114"             //  DNS system IP address
+#define DNS_SERVER_IP "223.5.5.5"             //  DNS system IP address
 
 #define MAX_SEND_COUNTS 3                           //  maximun number of message sent
 
@@ -104,16 +104,21 @@ public:
 private:
     bool udp_start(char *domainname);
     void tcp_start(char *domainname);
-    void construct_dns_message(char *domainname);
+    int construct_dns_message(char *domainname);
     void get_correct_domainname(char *domainname);
     void split(char *domainname);
-    int udp_send();
+    bool udp_send(int sendsize);
+    bool udp_recv(int &recvsize);
+    bool parsedata();
+    int decodename(int &readsize, std::string &namestr);
+    int decodename1(int &readsize, std::string &namestr);
 
     int _socket;
     struct sockaddr_in _to;
     std::vector<std::string> _labels;
+    struct timeval _timeout;
     DNS_HEADER_PTR _DNS_HEADER_PTR_SEND;                        // the first address of query message
-    DNS_HEADER_PTR _DNS_HEADER_PTR_RECE;                        // the first address of reply message
+    DNS_HEADER_PTR _DNS_HEADER_PTR_RECV;                        // the first address of reply message
 };
 
 #endif
