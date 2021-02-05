@@ -99,16 +99,7 @@ bool DNS::parsedata() {
     this->_DNS_HEADER_PTR_RECV->answer_rrs = ntohs(this->_DNS_HEADER_PTR_RECV->answer_rrs);
     this->_DNS_HEADER_PTR_RECV->authority_rrs = ntohs(this->_DNS_HEADER_PTR_RECV->authority_rrs);
     this->_DNS_HEADER_PTR_RECV->aditional_rrs = ntohs(this->_DNS_HEADER_PTR_RECV->aditional_rrs);
-//*
-    std::cout << "QR:" << this->_DNS_HEADER_PTR_RECV->flags.QR << "\n"
-              << "rcode:" << this->_DNS_HEADER_PTR_RECV->flags.rcode << "\n"
-              << "id:" << this->_DNS_HEADER_PTR_RECV->id << "TC:" << this->_DNS_HEADER_PTR_RECV->flags.TC 
-              <<std::endl;
-    std::cout << this->_DNS_HEADER_PTR_RECV->questions << "\n"
-              << this->_DNS_HEADER_PTR_RECV->answer_rrs << "\n"
-              << this->_DNS_HEADER_PTR_RECV->authority_rrs << "\n" 
-              << this->_DNS_HEADER_PTR_RECV->aditional_rrs << std::endl;
-//*
+
     // check the header
     if(this->_DNS_HEADER_PTR_RECV->id != getpid() ||
        this->_DNS_HEADER_PTR_RECV->flags.QR != DNS_FLAG_QR_RESPONSE ||
@@ -122,15 +113,12 @@ bool DNS::parsedata() {
         readsize += this->decodename(readsize, namestr);
         DNS_QUERY_QUESTION_PTR P = (DNS_QUERY_QUESTION_PTR)&this->_DNS_HEADER_PTR_RECV->other_data[readsize];
         readsize += DNS_QUERY_QUESTION_SIZE;
-        std::cout << "Addr: " << namestr << std::endl;
-        std::cout << "A:" << ntohs(P->query_type) << "B:" << ntohs(P->query_class) << "\n";
     }
 
     // parse answer_rrs
     for(int i = 0; i < this->_DNS_HEADER_PTR_RECV->answer_rrs; ++i) {
         std::string namestr;
         readsize += this->decodename(readsize, namestr);
-        std::cout << namestr << "\n";
 
         DNS_RRS_PTR rrs_ptr = (DNS_RRS_PTR)&this->_DNS_HEADER_PTR_RECV->other_data[readsize];
 
@@ -139,29 +127,24 @@ bool DNS::parsedata() {
         rrs_ptr->ttl = ntohs(rrs_ptr->ttl);
         rrs_ptr->len = ntohs(rrs_ptr->len);
 
-        std::cout << "len" << ntohs(rrs_ptr->len) << "\n";
-
-        std::cout << "type:" << ntohs(rrs_ptr->query_type) << "\n"
-                  << "class:" << ntohs(rrs_ptr->query_class) << std::endl;
-
         uint32_t ip = *(uint32_t*)rrs_ptr->other_data;
         struct sockaddr_in addr;
         memcpy(&addr.sin_addr.s_addr, &ip, sizeof(ip));
         std::cout << "ip:" << inet_ntoa(addr.sin_addr) << "\n";
-        readsize += rrs_ptr->len;
+        readsize += sizeof(ip);
     }
     return true;
 }
 
-int DNS::decodename(int &readsize, std::string &namestr) {
+int DNS::decodename(int readsize, std::string &namestr) {
     int offset = 0;
     int len = -1;
     bool isofff = false;
 
     while((len = this->_DNS_HEADER_PTR_RECV->other_data[readsize+offset]) != 0) {
-        if(len & 0xC0) {
-            int jmp_pos = ntohs(*(uint16_t *)&this->_DNS_HEADER_PTR_RECV->other_data[readsize+offset]) & 0x3FFF;
-            readsize = jmp_pos - DNS_HEADER_SIZE - 1;
+        if((len & 0xC0) == 0xC0) {
+            uint16_t jmp_pos = ntohs(*(uint16_t *)&this->_DNS_HEADER_PTR_RECV->other_data[readsize+offset]) & 0x3FFF;
+            readsize = jmp_pos - DNS_HEADER_SIZE;
             this->decodename(readsize, namestr);
             isofff = true;
             offset += 2;
@@ -279,52 +262,8 @@ int DNS::construct_dns_message(char *domainname) {
     DQQP->query_class = htons(DNS_QUERY_CALSS_IN);
 
     return message_size;
-    /*
-    // look at message
-    std::cout << this->_DNS_HEADER_PTR_SEND->id << "\n"
-              << ntohs(*(char*)&this->_DNS_HEADER_PTR_SEND->flags) << "\n"
-              << ntohs(this->_DNS_HEADER_PTR_SEND->questions) << "\n"
-              << this->_DNS_HEADER_PTR_SEND->answer_rrs << "\n"
-              << this->_DNS_HEADER_PTR_SEND->authority_rrs << "\n"
-              << this->_DNS_HEADER_PTR_SEND->aditional_rrs << std::endl;
-
-    std::string name;
-    int m = 0;
-    this->decodename1(m, name);
-    std::cout << name << "\n";
-    std::cout << ntohs(DQQP->query_type) << "\n" << ntohs(DQQP->query_class) << std::endl;
-    */
 }
-/*
-int DNS::decodename1(int &readsize, std::string &namestr) {
-    int offset = 0;
-    int len = -1;
-    bool isofff = false;
 
-    while((len = this->_DNS_HEADER_PTR_SEND->other_data[readsize+offset]) != 0) {
-        std::cout << len << "\n";
-        if(len & 0xC0) {
-            int jmp_pos = ntohs(*(char*)&this->_DNS_HEADER_PTR_SEND->other_data[readsize+offset]) & 0x3FFF;
-            readsize = jmp_pos - DNS_HEADER_SIZE;
-            this->decodename(readsize, namestr);
-            isofff = true;
-            offset += 2;
-            break;
-        }
-
-        if(!namestr.empty()) {
-            namestr += '.';
-        }
-        namestr.append((char*)&this->_DNS_HEADER_PTR_SEND->other_data[readsize+offset+1], len);
-        offset += len + 1;
-    }
-    if(offset > 0 && !isofff) {
-            offset += 1;
-        }
-    std::cout << len << "\n";
-    return offset;
-}
-*/
 void DNS::get_correct_domainname(char *domainname) {
     //  waiting
 }

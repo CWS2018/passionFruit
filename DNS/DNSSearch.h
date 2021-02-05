@@ -110,9 +110,8 @@ private:
     bool udp_send(int sendsize);
     bool udp_recv(int &recvsize);
     bool parsedata();
-    int decodename(int &readsize, std::string &namestr);
-    int decodename1(int &readsize, std::string &namestr);
-
+    int decodename(int readsize, std::string &namestr);
+    
     int _socket;
     struct sockaddr_in _to;
     std::vector<std::string> _labels;

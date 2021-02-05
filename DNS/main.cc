@@ -9,8 +9,8 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    DNS event;
+    DNS Event;
     char *dns_server_ip = DNS_SERVER_IP;
-    event.start(argv[1]);
+    Event.start(argv[1]);
     return 0;
 }
